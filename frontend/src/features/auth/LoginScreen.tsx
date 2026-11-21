@@ -1,14 +1,51 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './login.css'
 
 export default function LoginScreen({ onLogin }: { onLogin: (username: string, password: string) => Promise<void> }) {
-  const dialog = useRef<HTMLDialogElement>(null)
+  const hero = useRef<HTMLElement>(null)
+  const usernameInput = useRef<HTMLInputElement>(null)
+  const openButton = useRef<HTMLButtonElement>(null)
+  const [loginOpen, setLoginOpen] = useState(false)
+  const secondScreen = useRef<HTMLDivElement>(null)
+  const showcase = useRef<HTMLElement>(null)
+  const [revealed, setRevealed] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  function openLogin() { setError(''); dialog.current?.showModal() }
+  useEffect(() => {
+    document.documentElement.classList.add('entry-scrollbar')
+    return () => document.documentElement.classList.remove('entry-scrollbar')
+  }, [])
+
+  useEffect(() => {
+    const target = secondScreen.current
+    if (!target) return
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setRevealed(true); return }
+    const update = () => {
+      const bounds = target.getBoundingClientRect()
+      setRevealed(bounds.top < window.innerHeight * 0.85 && bounds.bottom > 0)
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update) }
+  }, [])
+
+  useEffect(() => {
+    const container = showcase.current
+    if (!container || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const items = container.querySelectorAll<HTMLElement>('.showcase-image')
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+      entry.target.classList.toggle('showcase-visible', entry.isIntersecting)
+    }), { threshold: 0.1 })
+    items.forEach(item => { item.classList.add('showcase-animated'); observer.observe(item) })
+    return () => observer.disconnect()
+  }, [])
+
+  function openLogin() { setError(''); setLoginOpen(true); hero.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); window.setTimeout(() => usernameInput.current?.focus({ preventScroll: true }), 350) }
+  function closeLogin() { if (busy) return; setLoginOpen(false); setPassword(''); setError(''); openButton.current?.focus({ preventScroll: true }) }
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (busy) return
@@ -19,22 +56,37 @@ export default function LoginScreen({ onLogin }: { onLogin: (username: string, p
   }
 
   return <div className="loom-entry">
+    <EntryScrollbar />
     <header className="entry-nav">
       <a className="entry-logo" href="#">loom<span>CONTENT STUDIO</span></a>
     </header>
     <main>
-      <section className="entry-hero">
-        <div className="entry-particles" aria-hidden="true">{Array.from({ length: 38 }, (_, i) => <i key={i} style={{ left: `${(i * 37 + 11) % 100}%`, top: `${(i * 23 + 7) % 100}%`, animationDelay: `${-i * .7}s`, animationDuration: `${9 + i % 8}s` }}/>)}</div>
-        <div className="entry-hero-content">
+      <section ref={hero} className={`entry-hero${loginOpen ? ' login-open' : ''}`} onKeyDown={e => { if (e.key === 'Escape' && loginOpen) closeLogin() }}>
+        <div className="entry-particles" aria-hidden="true">{Array.from({ length: 38 }, (_, i) => <i key={i} style={{ left: `${(i * 37 + 11) % 100}%`, top: `${(i * 23 + 7) % 100}%`, animationDelay: `${-i * .7}s`, animationDuration: `${9 + i % 8}s`, '--twinkle-delay': `${-((i * 17) % 37)}s`, '--twinkle-duration': `${8 + (i * 7) % 11}s` } as React.CSSProperties}><span /></i>)}</div>
+        <div className="entry-hero-layout"><div className="entry-hero-content">
           <p className="entry-eyebrow"><span/> LOOM · AI CONTENT WORKSPACE</p>
           <h1>让灵感在此汇聚<br/><span>让好内容开始流动</span></h1>
           <p className="entry-description">连接热点、产品与创作，让每一个想法走向成稿。<br/>与团队一起，在同一个工作空间里完成下一次创作。</p>
-          <button className="entry-primary" onClick={openLogin}>进入内容工作台 <span aria-hidden="true">→</span></button>
-          <p className="entry-access">使用团队账号登录，开启你的创作流程</p>
-        </div>
-        <a className="entry-scroll" href="#entry-features">探索工作空间 <span aria-hidden="true">↓</span></a>
+          <div className="entry-open-actions" inert={loginOpen} aria-hidden={loginOpen}><button ref={openButton} className="entry-primary" onClick={openLogin} aria-expanded={loginOpen} aria-controls="entry-login-panel">进入内容工作台</button></div>
+        </div><div id="entry-login-panel" className="entry-inline-login" inert={!loginOpen} aria-hidden={!loginOpen}>
+          <div className="entry-login-panel">
+            <button className="entry-close" type="button" aria-label="关闭登录表单" disabled={busy} onClick={closeLogin}>×</button>
+            <h2 id="entry-login-title">Welcome back</h2>
+            <form onSubmit={submit}>
+              <label htmlFor="entry-username">用户名</label><input ref={usernameInput} id="entry-username" autoComplete="username" required disabled={busy} value={username} onChange={e => setUsername(e.target.value)} placeholder="输入用户名"/>
+              <label htmlFor="entry-password">密码</label><input id="entry-password" autoComplete="current-password" required disabled={busy} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="输入密码"/>
+              {error && <div className="entry-error" role="alert">{error}</div>}
+              <button className="entry-primary" disabled={busy}>{busy ? '正在登录…' : '登录工作台'}</button>
+            </form>
+          </div>
+        </div></div>
       </section>
-      <section className="entry-features" id="entry-features" aria-labelledby="entry-features-title">
+      <section ref={showcase} className="entry-showcase" aria-labelledby="showcase-title">
+        <div className="showcase-heading"><p className="entry-eyebrow">CREATIVE SHOWCASE</p><h2 id="showcase-title">灵感，拥有无限可能</h2><p>每一个想法，都值得被看见。</p><small>图片展示示例</small></div>
+        <div className="showcase-grid">{Array.from({ length: 4 }, (_, column) => <div className="showcase-column" key={column}>{Array.from({ length: 3 }, (_, row) => { const number = column * 3 + row + 1; return <div className="showcase-image" key={number} style={{ '--showcase-delay': `${100 + (number - 1) * 50}ms` } as React.CSSProperties}><img src={`/showcase/${number}.jpg`} alt={`创意图片展示示例 ${number}`} loading="lazy" /><span className="showcase-caption">创意展示 · 示例</span></div> })}</div>)}</div>
+      </section>
+      <div ref={secondScreen} className={`entry-second-screen${revealed ? ' is-revealed' : ''}`} id="entry-features">
+      <section className="entry-features" aria-labelledby="entry-features-title">
         <h2 id="entry-features-title">创作的每一步，都有迹可循</h2>
         <p className="entry-features-intro">从发现灵感到完成创作，在一个空间里<br/>连接内容、产品与团队。</p>
         <div className="entry-feature-grid">{[
@@ -48,20 +100,43 @@ export default function LoginScreen({ onLogin }: { onLogin: (username: string, p
         <p>让灵感、产品和团队在 Loom 汇聚，<br/>一起把每一个想法变成好内容。</p>
         <button className="entry-primary" onClick={openLogin}>开始创作</button>
       </section>
-    </main>
-    <footer className="entry-footer"><strong>loom</strong><span>灵感有序，创作自由。</span><small>INTERNAL CONTENT WORKSPACE</small></footer>
-    <dialog className="entry-dialog" ref={dialog} aria-labelledby="entry-login-title" onCancel={e => { if (busy) e.preventDefault() }} onClick={e => { if (e.target === e.currentTarget && !busy) dialog.current?.close() }} onClose={() => { setPassword(''); setError('') }}>
-      <div className="entry-login-panel">
-        <button className="entry-close" type="button" aria-label="关闭登录表单" disabled={busy} onClick={() => dialog.current?.close()}>×</button>
-        <p className="entry-eyebrow">WELCOME BACK</p><h2 id="entry-login-title">登录内容工作台</h2><p className="entry-login-intro">使用管理员为你创建的团队账号。</p>
-        <form onSubmit={submit}>
-          <label htmlFor="entry-username">用户名</label><input id="entry-username" autoFocus autoComplete="username" required disabled={busy} value={username} onChange={e => setUsername(e.target.value)} placeholder="输入用户名"/>
-          <label htmlFor="entry-password">密码</label><input id="entry-password" autoComplete="current-password" required disabled={busy} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="输入密码"/>
-          {error && <div className="entry-error" role="alert">{error}</div>}
-          <button className="entry-primary" disabled={busy}>{busy ? '正在登录…' : '登录工作台'}<span aria-hidden="true">→</span></button>
-        </form>
-        <p className="entry-login-help">还没有账号？请联系团队管理员。</p>
+      <footer className="entry-footer"><strong>loom</strong><span>灵感有序，创作自由。</span><small>INTERNAL CONTENT WORKSPACE</small></footer>
       </div>
-    </dialog>
+    </main>
   </div>
+}
+
+function EntryScrollbar() {
+  const track = useRef<HTMLDivElement>(null)
+  const dragOffset = useRef<number | null>(null)
+  const [metrics, setMetrics] = useState({ top: 0, height: 0, max: 0, value: 0 })
+
+  useEffect(() => {
+    const update = () => {
+      const viewport = window.innerHeight
+      const total = document.documentElement.scrollHeight
+      const max = Math.max(0, total - viewport)
+      const height = Math.min(viewport, Math.max(42, viewport * viewport / total))
+      setMetrics({ top: max ? Math.min(max, Math.max(0, window.scrollY)) / max * (viewport - height) : 0, height, max, value: Math.min(max, Math.max(0, window.scrollY)) })
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    const observer = new ResizeObserver(update)
+    observer.observe(document.body)
+    return () => { window.removeEventListener('scroll', update); window.removeEventListener('resize', update); observer.disconnect() }
+  }, [])
+
+  function move(clientY: number, offset: number) {
+    const rect = track.current?.getBoundingClientRect()
+    if (!rect) return
+    const available = rect.height - metrics.height
+    if (available > 0) window.scrollTo({ top: Math.max(0, Math.min(1, (clientY - rect.top - offset) / available)) * metrics.max, behavior: 'instant' })
+  }
+  function keyScroll(event: React.KeyboardEvent) {
+    const values: Record<string, number> = { ArrowDown: 40, ArrowUp: -40, PageDown: window.innerHeight, PageUp: -window.innerHeight, Home: -metrics.max, End: metrics.max }
+    if (event.key in values) { event.preventDefault(); window.scrollBy({ top: values[event.key], behavior: 'instant' }) }
+  }
+  if (!metrics.max) return null
+  return <div ref={track} className="entry-custom-scroll" role="scrollbar" aria-label="页面滚动" aria-orientation="vertical" aria-valuemin={0} aria-valuemax={Math.round(metrics.max)} aria-valuenow={Math.round(metrics.value)} tabIndex={0} onKeyDown={keyScroll} onPointerDown={event => { if (event.button !== 0) return; const thumb = event.currentTarget.querySelector('.entry-custom-thumb')?.getBoundingClientRect(); dragOffset.current = event.target === event.currentTarget || !thumb ? metrics.height / 2 : event.clientY - thumb.top; event.currentTarget.setPointerCapture(event.pointerId); move(event.clientY, dragOffset.current) }} onPointerMove={event => { if (dragOffset.current !== null) move(event.clientY, dragOffset.current) }} onPointerUp={() => { dragOffset.current = null }} onPointerCancel={() => { dragOffset.current = null }} onLostPointerCapture={() => { dragOffset.current = null }}><div className="entry-custom-thumb" style={{ height: metrics.height, transform: `translateY(${metrics.top}px)` }}/></div>
 }
