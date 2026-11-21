@@ -19,6 +19,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && path !== '/auth/login') headers['X-CSRF-Token'] = csrfToken()
   const response = await fetch(`/api/v1${path}`, { credentials: 'same-origin', headers, ...options })
   if (!response.ok) {
+    if (response.status === 401 && path !== '/auth/login') {
+      window.dispatchEvent(new Event('loom:unauthorized'))
+      if (window.location.pathname !== '/login') window.location.replace('/login')
+    }
     const body = await response.json().catch(() => ({}))
     throw new ApiError(body.detail || `请求失败 (${response.status})`, response.status)
   }

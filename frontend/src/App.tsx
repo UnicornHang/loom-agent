@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError, type AgentEvent, type Hotspot, type Product, type ProductGroup, type User, type Workflow } from './api'
 import AdminPanel from './features/admin/AdminPanel'
+import LoginScreen from './features/auth/LoginScreen'
 
 type Page = 'overview' | 'hotspots' | 'workflows' | 'products' | 'agents' | 'logs' | 'settings'
 const menu: { key: Page; label: string; mark: string }[] = [
@@ -54,6 +55,29 @@ export default function App() {
   useEffect(() => {
     void api.me().then(me => { setUser(me); void refresh() }).catch(() => setUser(null)).finally(() => setAuthLoading(false))
   }, [])
+  useEffect(() => {
+    const expireSession = () => {
+      setUser(null)
+      setProducts([]); setHotspots([]); setWorkflows([]); setGroups([])
+      setEvents([]); setSelectedWorkflow(null); setPage('overview')
+      setShowProductForm(false); setShowHotspotForm(false); setShowPasswordForm(false)
+    }
+    window.addEventListener('loom:unauthorized', expireSession)
+    return () => window.removeEventListener('loom:unauthorized', expireSession)
+  }, [])
+  useEffect(() => {
+    if (authLoading) return
+    const redirect = () => {
+      if (!user && window.location.pathname !== '/login') {
+        window.history.replaceState(null, '', '/login')
+      } else if (user && window.location.pathname === '/login') {
+        window.history.replaceState(null, '', '/')
+      }
+    }
+    redirect()
+    window.addEventListener('popstate', redirect)
+    return () => window.removeEventListener('popstate', redirect)
+  }, [authLoading, user])
   useEffect(() => {
     if (!selectedWorkflow) return
     void api.events(selectedWorkflow).then(setEvents).catch(e => setError((e as Error).message))
@@ -134,17 +158,4 @@ function Empty({ title, body }: { title: string; body: string }) { return <div c
 function WorkflowList({ workflows, hotspots, onOpen }: { workflows: Workflow[]; hotspots: Hotspot[]; onOpen: (id: string) => void }) { return workflows.length ? <div className="workflow-list">{workflows.map(w => <button key={w.id} onClick={() => onOpen(w.id)}><span className="workflow-symbol">◇</span><span><strong>{hotspots.find(h => h.id === w.hotspot_id)?.title || '工作流'}</strong><small>{formatDate(w.created_at)} · 等待素材确认</small></span><b>↗</b></button>)}</div> : <Empty title="还没有工作流" body="从热点大厅选择一条内容，开始第一条创作流程。"/> }
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) { return <div className="modal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}><div className="modal"><div className="modal-head"><h2>{title}</h2><button onClick={onClose} aria-label="关闭">×</button></div>{children}</div></div> }
 
-function LoginScreen({ onLogin }: { onLogin: (username: string, password: string) => Promise<void> }) {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  async function submit(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError('')
-    try { await onLogin(username, password) }
-    catch (e) { setError((e as Error).message) }
-    finally { setBusy(false) }
-  }
-  return <div className="login-page"><div className="login-brand"><div className="brand-mark"><span/><span/><span/></div><div><strong>loom</strong><small>CONTENT STUDIO</small></div></div><div className="login-card"><div className="eyebrow">WORKSPACE ACCESS</div><h1>登录内容工作台</h1><p>使用管理员为你创建的账号进入团队工作空间。</p><form className="form" onSubmit={submit}><label>用户名<input autoComplete="username" required value={username} onChange={e => setUsername(e.target.value)} placeholder="输入用户名"/></label><label>密码<input autoComplete="current-password" required type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="输入密码"/></label>{error && <div className="login-error" role="alert">{error}</div>}<button className="primary" disabled={busy}>{busy ? '正在登录…' : '登录'}</button></form></div><small className="login-footer">LOOM · INTERNAL CONTENT WORKSPACE</small></div>
-}
 
