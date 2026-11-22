@@ -11,7 +11,7 @@ from app.migrate import upgrade_database
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.app_env != "development":
-        raise RuntimeError("当前版本未实现登录与权限控制，仅允许 development 环境启动")
+        raise RuntimeError("当前部署配置仅供开发环境使用，生产部署安全配置尚未完成")
     upgrade_database()
     yield
 

@@ -1,9 +1,11 @@
+import type { InputRef } from 'antd'
+import { Button, Input, Select, Form, Modal as AntModal, Empty as AntEmpty } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import './login.css'
 
 export default function LoginScreen({ onLogin }: { onLogin: (username: string, password: string) => Promise<void> }) {
   const hero = useRef<HTMLElement>(null)
-  const usernameInput = useRef<HTMLInputElement>(null)
+  const usernameInput = useRef<InputRef>(null)
   const openButton = useRef<HTMLButtonElement>(null)
   const [loginOpen, setLoginOpen] = useState(false)
   const secondScreen = useRef<HTMLDivElement>(null)
@@ -67,17 +69,17 @@ export default function LoginScreen({ onLogin }: { onLogin: (username: string, p
           <p className="entry-eyebrow"><span/> LOOM · AI CONTENT WORKSPACE</p>
           <h1>让灵感在此汇聚<br/><span>让好内容开始流动</span></h1>
           <p className="entry-description">连接热点、产品与创作，让每一个想法走向成稿。<br/>与团队一起，在同一个工作空间里完成下一次创作。</p>
-          <div className="entry-open-actions" inert={loginOpen} aria-hidden={loginOpen}><button ref={openButton} className="entry-primary" onClick={openLogin} aria-expanded={loginOpen} aria-controls="entry-login-panel">进入内容工作台</button></div>
+          <div className="entry-open-actions" inert={loginOpen} aria-hidden={loginOpen}><Button ref={openButton} className="entry-primary" onClick={openLogin} aria-expanded={loginOpen} aria-controls="entry-login-panel">进入内容工作台</Button></div>
         </div><div id="entry-login-panel" className="entry-inline-login" inert={!loginOpen} aria-hidden={!loginOpen}>
           <div className="entry-login-panel">
-            <button className="entry-close" type="button" aria-label="关闭登录表单" disabled={busy} onClick={closeLogin}>×</button>
+            <Button className="entry-close" htmlType="button" aria-label="关闭登录表单" disabled={busy} onClick={closeLogin}>×</Button>
             <h2 id="entry-login-title">Welcome back</h2>
-            <form onSubmit={submit}>
-              <label htmlFor="entry-username">用户名</label><input ref={usernameInput} id="entry-username" autoComplete="username" required disabled={busy} value={username} onChange={e => setUsername(e.target.value)} placeholder="输入用户名"/>
-              <label htmlFor="entry-password">密码</label><input id="entry-password" autoComplete="current-password" required disabled={busy} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="输入密码"/>
+            <Form onSubmitCapture={submit}>
+              <label htmlFor="entry-username">用户名</label><Input ref={usernameInput} id="entry-username" autoComplete="username" required disabled={busy} value={username} onChange={e => setUsername(e.target.value)} placeholder="输入用户名"/>
+              <label htmlFor="entry-password">密码</label><Input id="entry-password" autoComplete="current-password" required disabled={busy} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="输入密码"/>
               {error && <div className="entry-error" role="alert">{error}</div>}
-              <button className="entry-primary" disabled={busy}>{busy ? '正在登录…' : '登录工作台'}</button>
-            </form>
+              <Button htmlType="submit" className="entry-primary" disabled={busy}>{busy ? '正在登录…' : '登录工作台'}</Button>
+            </Form>
           </div>
         </div></div>
       </section>
@@ -98,7 +100,7 @@ export default function LoginScreen({ onLogin }: { onLogin: (username: string, p
       <section className="entry-cta" aria-labelledby="entry-cta-title">
         <h2 id="entry-cta-title">准备好开启你的创作了吗？</h2>
         <p>让灵感、产品和团队在 Loom 汇聚，<br/>一起把每一个想法变成好内容。</p>
-        <button className="entry-primary" onClick={openLogin}>开始创作</button>
+        <Button className="entry-primary" onClick={openLogin}>开始创作</Button>
       </section>
       <footer className="entry-footer"><strong>loom</strong><span>灵感有序，创作自由。</span><small>INTERNAL CONTENT WORKSPACE</small></footer>
       </div>

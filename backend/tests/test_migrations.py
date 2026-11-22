@@ -19,6 +19,6 @@ def test_existing_development_database_upgrades_without_recreating_tables(tmp_pa
                    cwd=backend, env=env, check=True, capture_output=True)
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT COUNT(*) FROM products WHERE id='legacy-product'").fetchone()[0] == 1
-        assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0002_identity_and_grants"
+        assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0015_recommendations"
         assert "group_id" in {row[1] for row in connection.execute("PRAGMA table_info(products)")}
         assert "users" in {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}

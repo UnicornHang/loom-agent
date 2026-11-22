@@ -73,3 +73,8 @@ html.entry-scrollbar{scrollbar-width:none}html.entry-scrollbar::-webkit-scrollba
 @property --card-glow-angle{syntax:"<angle>";initial-value:0deg;inherits:false}
 .entry-feature-grid article:hover{border-color:transparent;background:linear-gradient(135deg,#102743 0%,#11152f 56%,#100f2b 100%) padding-box,conic-gradient(from var(--card-glow-angle),#253961,#00d4ff,#8061ff,#253961 45%,#253961 70%,#00d4ff) border-box;box-shadow:0 0 22px #348aff35,0 12px 30px #00d4ff18;animation:entry-border-flow 3s linear infinite}@keyframes entry-border-flow{to{--card-glow-angle:360deg}}@media(prefers-reduced-motion:reduce){.entry-feature-grid article:hover{animation:none}}
 @media(prefers-reduced-motion:no-preference){.entry-second-screen.is-revealed .entry-feature-grid article:hover{animation:entry-border-flow 3s linear infinite}}
+/* Keep library button states consistent with the landing page. */
+.loom-entry .entry-primary,.loom-entry .entry-primary:hover,.loom-entry .entry-primary:focus,.loom-entry .entry-primary:active{display:inline-flex;align-items:center;justify-content:center;height:48px;min-height:48px;padding:0 28px;line-height:1.4;text-align:center;color:#fff!important;-webkit-text-fill-color:#fff;background:linear-gradient(115deg,#00bfe9,#7c3aed);border-color:transparent}
+.loom-entry .entry-primary>span{margin:0;color:inherit}.loom-entry .entry-open-actions .entry-primary{min-width:184px}.loom-entry .entry-cta .entry-primary{height:50px;min-height:50px;min-width:220px}.loom-entry .entry-login-panel .entry-primary{width:100%}
+
+.loom-entry .entry-cta .entry-primary,.loom-entry .entry-cta .entry-primary:hover,.loom-entry .entry-cta .entry-primary:focus,.loom-entry .entry-cta .entry-primary:active{border:1px solid #ffffff80}

@@ -5,11 +5,24 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProductCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     group_id: str | None = None
     sku: str = Field(min_length=1, max_length=100)
     name: str = Field(min_length=1, max_length=200)
     category: str = Field(min_length=1, max_length=100)
-    description: str = ""
+    description: str = Field(default="", max_length=30000)
+
+
+class ProductUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    name: str = Field(min_length=1, max_length=200)
+    category: str = Field(min_length=1, max_length=100)
+    description: str = Field(default="", max_length=30000)
+    status: Literal["draft", "active", "archived"]
+    expected_description: str
+    expected_name: str
+    expected_category: str
+    expected_status: str
 
 
 class ProductRead(ProductCreate):

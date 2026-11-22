@@ -1,3 +1,4 @@
+import { Button, Input, Select, Form, Modal as AntModal, Empty as AntEmpty } from 'antd'
 import { useEffect, useState } from 'react'
 import { api, type ProductGroup, type User } from '../../api'
 
@@ -43,23 +44,23 @@ export default function AdminPanel({ onGroupsChanged, currentUserId }: { onGroup
   return <div className="admin-layout">
     <div className="admin-panel">
       <h3>成员账号</h3><p>管理员创建账号并分配角色。新成员需获得产品分组授权，才能看到组内产品。</p>
-      <form className="form" onSubmit={e => { e.preventDefault(); void run(() => api.createUser({ username, password, role }), '账号已创建').then(ok => { if (ok) { setUsername(''); setPassword('') } }) }}>
-        <label>用户名<input required minLength={3} value={username} onChange={e => setUsername(e.target.value)} placeholder="例如 content_01"/></label>
-        <label>初始密码<input required minLength={12} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 12 位"/></label>
-        <label>角色<select value={role} onChange={e => setRole(e.target.value as User['role'])}>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        <button className="primary" disabled={busy}>创建账号</button>
-      </form>
-      <div className="admin-list">{users.map(user => <div key={user.id}><strong>{user.username}</strong><small>{roleLabels[user.role]} · {user.is_active ? '启用' : '停用'}</small><button className="text-link" disabled={busy || user.id === currentUserId} onClick={() => void run(() => api.setUserActive(user.id, !user.is_active), user.is_active ? '账号已停用' : '账号已启用')}>{user.is_active ? '停用' : '启用'}</button></div>)}</div>
+      <Form className="form" onSubmitCapture={e => { e.preventDefault(); void run(() => api.createUser({ username, password, role }), '账号已创建').then(ok => { if (ok) { setUsername(''); setPassword('') } }) }}>
+        <label>用户名<Input required minLength={3} value={username} onChange={e => setUsername(e.target.value)} placeholder="例如 content_01"/></label>
+        <label>初始密码<Input required minLength={12} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="至少 12 位"/></label>
+        <label>角色<Select value={role} onChange={e => setRole(e as User['role'])}>{Object.entries(roleLabels).map(([key, label]) => <Select.Option key={key} value={key}>{label}</Select.Option>)}</Select></label>
+        <Button htmlType="submit" className="primary" disabled={busy}>创建账号</Button>
+      </Form>
+      <div className="admin-list">{users.map(user => <div key={user.id}><strong>{user.username}</strong><small>{roleLabels[user.role]} · {user.is_active ? '启用' : '停用'}</small><Button className="text-link" disabled={busy || user.id === currentUserId} onClick={() => void run(() => api.setUserActive(user.id, !user.is_active), user.is_active ? '账号已停用' : '账号已启用')}>{user.is_active ? '停用' : '启用'}</Button></div>)}</div>
     </div>
     <div className="admin-panel">
       <h3>产品分组与授权</h3><p>产品必须放入分组。管理员可决定每位成员能查看哪些分组。</p>
-      <form className="form admin-inline" onSubmit={e => { e.preventDefault(); void run(() => api.createGroup(name), '分组已创建').then(ok => { if (ok) setName('') }) }}>
-        <label>新分组名称<input required value={name} onChange={e => setName(e.target.value)} placeholder="例如 3C / 耳机"/></label><button className="primary" disabled={busy}>新增分组</button>
-      </form>
-      <label className="admin-select-label">当前分组<select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      {selectedGroup && <><form className="form admin-inline" onSubmit={e => { e.preventDefault(); void run(() => api.grantGroup(selectedGroup, grantUser), '授权已更新').then(ok => { if (ok) setGrantUser('') }) }}>
-        <label>授权成员<select required value={grantUser} onChange={e => setGrantUser(e.target.value)}><option value="">选择成员</option>{users.filter(user => user.role !== 'admin' && !grants.some(grant => grant.id === user.id)).map(user => <option key={user.id} value={user.id}>{user.username}</option>)}</select></label><button className="primary" disabled={busy || !grantUser}>授予访问</button>
-      </form><div className="admin-list"><strong className="admin-list-title">已授权成员</strong>{grants.length ? grants.map(user => <div key={user.id}><strong>{user.username}</strong><button className="text-link" disabled={busy} onClick={() => void run(() => api.revokeGroup(selectedGroup, user.id), '授权已撤销')}>撤销</button></div>) : <small>暂无成员获得授权</small>}</div></>}
+      <Form className="form admin-inline" onSubmitCapture={e => { e.preventDefault(); void run(() => api.createGroup(name), '分组已创建').then(ok => { if (ok) setName('') }) }}>
+        <label>新分组名称<Input required value={name} onChange={e => setName(e.target.value)} placeholder="例如 3C / 耳机"/></label><Button htmlType="submit" className="primary" disabled={busy}>新增分组</Button>
+      </Form>
+      <label className="admin-select-label">当前分组<Select value={selectedGroup} onChange={e => setSelectedGroup(e)}>{groups.map(group => <Select.Option key={group.id} value={group.id}>{group.name}</Select.Option>)}</Select></label>
+      {selectedGroup && <><Form className="form admin-inline" onSubmitCapture={e => { e.preventDefault(); void run(() => api.grantGroup(selectedGroup, grantUser), '授权已更新').then(ok => { if (ok) setGrantUser('') }) }}>
+        <label>授权成员<Select  value={grantUser} onChange={e => setGrantUser(e)}><Select.Option value="">选择成员</Select.Option>{users.filter(user => user.role !== 'admin' && !grants.some(grant => grant.id === user.id)).map(user => <Select.Option key={user.id} value={user.id}>{user.username}</Select.Option>)}</Select></label><Button htmlType="submit" className="primary" disabled={busy || !grantUser}>授予访问</Button>
+      </Form><div className="admin-list"><strong className="admin-list-title">已授权成员</strong>{grants.length ? grants.map(user => <div key={user.id}><strong>{user.username}</strong><Button className="text-link" disabled={busy} onClick={() => void run(() => api.revokeGroup(selectedGroup, user.id), '授权已撤销')}>撤销</Button></div>) : <small>暂无成员获得授权</small>}</div></>}
     </div>
     {message && <div className="admin-message" role="status">{message}</div>}
   </div>
