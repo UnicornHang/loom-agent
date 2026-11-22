@@ -2,12 +2,12 @@ from celery import Celery
 from sqlalchemy import select
 from app.config import settings
 from app.db import SessionLocal
-from app.models import OutboxTask
+from app.models import OutboxTask, CollectionRun
 
 celery = Celery('loom', broker=settings.redis_url)
 celery.conf.update(task_serializer='json', accept_content=['json'], worker_prefetch_multiplier=1,
     broker_connection_retry_on_startup=True, task_acks_late=True, task_reject_on_worker_lost=True,
-    beat_schedule={'outbox': {'task': 'loom.dispatch', 'schedule': 5.0}, 'sources': {'task': 'loom.sources', 'schedule': 60.0}})
+    beat_schedule={'outbox': {'task': 'loom.dispatch', 'schedule': 5.0, 'options': {'queue': 'control'}}, 'sources': {'task': 'loom.sources', 'schedule': 60.0, 'options': {'queue': 'control'}}})
 
 @celery.task(name='loom.sources')
 def source_schedule():
@@ -21,7 +21,16 @@ def dispatch():
         for row in rows:
             run.delay(row.run_id)
             row.sent = True
+        collections = db.scalars(select(CollectionRun).where(CollectionRun.status == 'queued', CollectionRun.dispatched == False).with_for_update(skip_locked=True).limit(20)).all()
+        for row in collections:
+            collect.apply_async(args=[row.id], queue='collection')
+            row.dispatched = True
         db.commit()
+
+@celery.task(name='loom.collect', soft_time_limit=60, time_limit=90, rate_limit='6/m')
+def collect(run_id):
+    from app.services.collection_scheduler import execute_collection
+    execute_collection(run_id, SessionLocal)
 
 @celery.task(name='loom.run', soft_time_limit=1740, time_limit=1800)
 def run(run_id):

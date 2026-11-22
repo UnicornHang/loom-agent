@@ -1,4 +1,4 @@
-import { Button, Input, Select, Form, Menu, Table, Card, Steps, Timeline, Alert, Layout, Modal as AntModal, Empty as AntEmpty } from 'antd'
+import { Button, Input, Select, Form, Menu, Table, Card, Steps, Timeline, Alert, Layout, Space, Modal as AntModal, Empty as AntEmpty } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { api, ApiError, type AgentEvent, type Hotspot, type Product, type ProductGroup, type User, type Workflow } from './api'
 import AdminPanel from './features/admin/AdminPanel'
@@ -11,6 +11,7 @@ import WorkflowEntry from './features/workflows/WorkflowEntry'
 import ContentLibrary from './features/contents/ContentLibrary'
 import SourceSettings from './features/sources/SourceSettings'
 import AuditLog from './features/admin/AuditLog'
+import HotspotFeed from './features/hotspots/HotspotFeed'
 
 type Page = 'entry' | 'sources' | 'contents' | 'overview' | 'hotspots' | 'workflows' | 'products' | 'agents' | 'logs' | 'settings'
 const menu: { key: Page; label: string; mark: string }[] = [
@@ -31,10 +32,6 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 }
 
-function badge(type: Hotspot['content_type']) {
-  return type === 'video' ? '视频' : type === 'article' ? '图文' : '纯文字'
-}
-
 export default function App() {
   const [page, setPage] = useState<Page>('overview')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -44,6 +41,12 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([])
   const [groups, setGroups] = useState<ProductGroup[]>([])
   const [hotspots, setHotspots] = useState<Hotspot[]>([])
+  useEffect(() => {
+    if (!user || page !== 'hotspots') return
+    void refreshHotspots()
+    const timer = window.setInterval(() => { void refreshHotspots() }, 30000)
+    return () => window.clearInterval(timer)
+  }, [page, user?.id])
   const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [events, setEvents] = useState<AgentEvent[]>([])
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null)
@@ -57,13 +60,32 @@ export default function App() {
   const [productDraft, setProductDraft] = useState({ sku: '', name: '', category: '', description: '', group_id: '' })
   const [hotspotDraft, setHotspotDraft] = useState({ title: '', summary: '', content_type: 'article' as Hotspot['content_type'], source_url: '', industry: '3C' })
 
-  async function refresh() {
+  async function refreshHotspots() {
     try {
-      const [health, p, h, w, g] = await Promise.all([api.health(), api.products(), api.hotspots(), api.workflows(), api.groups()])
-      setConnected(health.status === 'ok')
-      setProducts(p); setHotspots(h); setWorkflows(w); setGroups(g); setError('')
-      setProductDraft(current => ({ ...current, group_id: current.group_id || g[0]?.id || '' }))
-    } catch (e) { setConnected(false); if (e instanceof ApiError && e.status === 401) setUser(null); else setError((e as Error).message) }
+      setHotspots(await api.hotspots())
+      setError('')
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) setUser(null)
+      else setError(`热点加载失败：${(e as Error).message}`)
+    }
+  }
+
+  async function refresh() {
+    const results = await Promise.allSettled([
+      api.health().then(health => setConnected(health.status === 'ok')),
+      api.products().then(setProducts),
+      api.hotspots().then(setHotspots),
+      api.workflows().then(setWorkflows),
+      api.groups().then(g => {
+        setGroups(g)
+        setProductDraft(current => ({ ...current, group_id: current.group_id || g[0]?.id || '' }))
+      }),
+    ])
+    const failed = results.find(result => result.status === 'rejected')
+    if (failed?.status === 'rejected') {
+      if (failed.reason instanceof ApiError && failed.reason.status === 401) setUser(null)
+      else setError(failed.reason instanceof Error ? failed.reason.message : '部分数据加载失败，请重试')
+    } else setError('')
   }
 
   useEffect(() => {
@@ -153,7 +175,7 @@ export default function App() {
       {error && <div className="error-banner"><span>{error}</span><Button onClick={() => { setError(''); void refresh() }}>重试</Button></div>}
       <div className="content">
         {page === 'overview' && <><div className="eyebrow">LOOM / OVERVIEW</div><div className="heading-row"><div><h1>让好内容<br/><em>开始流动。</em></h1><p className="lead">从种草灵感到可发布的内容，保持每一步都可看、可改、可追溯。</p></div><div className="edition">BUILD 001<span>工作台预览</span></div></div><div className="quick-grid"><Button className="quick-card dark" onClick={() => { setPage('hotspots'); setShowHotspotForm(true) }}><div className="quick-top"><span>01 / 从内容开始</span><b>↗</b></div><h2>添加一条灵感</h2><p>粘贴你找到的文章或视频，开始创建工作流。</p><div className="quick-foot">手动导入 · 立即可用</div></Button><Button className="quick-card" onClick={() => setPage('products')}><div className="quick-top"><span>02 / 准备产品</span><b>↗</b></div><h2>建立产品资料</h2><p>产品信息会成为后续推荐与创作的事实依据。</p><div className="quick-foot">已录入 {products.length} 个产品</div></Button></div><div className="section-title"><h3>流程概览</h3><span>从发现到定稿</span></div><Steps current={-1} items={stages.map(title => ({ title }))}/><div className="section-title lower"><h3>最近工作流</h3><Button className="text-link" onClick={() => setPage('workflows')}>查看全部 →</Button></div><WorkflowList workflows={workflows.slice(0, 3)} hotspots={hotspots} onOpen={id => { setSelectedWorkflow(id); setPage('workflows') }}/></>}
-        {page === 'hotspots' && <><PageHeading eyebrow="DISCOVERY / 01" title="热点信息大厅" intro="收集高表现种草作品。当前来源为手动导入，自动采集接入后会在这里显示。" action={<Button className="primary" onClick={() => setShowHotspotForm(true)}>＋ 添加内容</Button>}/><div className="notice"><span>◉</span><div><strong>采集来源尚未接入</strong><p>列表中的内容由团队手动提交，不会显示为自动抓取的热点。</p></div></div><div className="list-header"><span>内容列表</span><small>{hotspots.length} 条内容</small></div>{hotspots.length ? <div className="hotspot-grid">{hotspots.map(h => <Card className="hotspot-card" key={h.id}><div className="card-meta"><span className="pill">{badge(h.content_type)}</span><span>手动导入</span></div><h3>{h.title}</h3><p>{h.summary || '暂无摘要。进入工作流前请补充有权使用的原始素材。'}</p><div className="card-bottom"><small>{formatDate(h.created_at)}</small><Button onClick={() => void startWorkflow(h.id)} disabled={busy}>开始创作 ↗</Button></div></Card>)}</div> : <Empty title="还没有热点内容" body="添加你找到的种草图文或视频，作为第一条创作素材。"/>}</>}
+        {page === 'hotspots' && <><PageHeading eyebrow="DISCOVERY / 01" title="热点信息大厅" intro="查看多平台公开榜单线索与团队提交的参考内容。" action={<Space><Button onClick={() => void refreshHotspots()}>刷新列表</Button><Button className="primary" onClick={() => setShowHotspotForm(true)}>＋ 添加内容</Button></Space>}/><div className="notice"><span>◉</span><div><strong>第一版：公开热榜线索</strong><p>自动采集仅包含热搜话题、热度与链接；开始创作前仍需提交有权使用的参考正文或视频文字稿。</p></div></div><HotspotFeed hotspots={hotspots} busy={busy} onCreate={id => void startWorkflow(id)} /></>}
         {page === 'entry' && <><PageHeading eyebrow="CREATE / 02" title="工作流入口" intro="提交你自己的参考素材，从这里开始创作。" />{['admin', 'creator'].includes(user.role) ? <WorkflowEntry onCreated={id => { void refresh().then(() => { setSelectedWorkflow(id); setPage('workflows') }) }} /> : <Alert type="info" title="当前账号没有创建工作流权限" />}</>}
         {page === 'workflows' && <><PageHeading eyebrow="WORKFLOWS / 02" title="工作流" intro="每一次创作都保留节点、版本和执行记录。"/>{selected ? <div className="workflow-detail"><Button className="back" onClick={() => setSelectedWorkflow(null)}>← 返回列表</Button><div className="detail-head"><div><span className="pill">{selected.current_step === 'completed' ? '成果已保存' : selected.current_step === 'drafting' ? '创作与确认' : '等待资料确认'}</span><h2>{selectedHotspot?.title || '未命名工作流'}</h2><p>工作流 ID · {selected.id.slice(0, 12)}</p></div></div><WorkspacePanel key={selected.id} workflowId={selected.id} onChange={() => { void refresh(); void api.events(selected.id).then(setEvents) }} /><Card title="工作流操作记录"><Timeline items={events.map(e => ({ content: <><strong>{e.title}</strong><p>{e.summary}</p><small>{formatDate(e.created_at)}</small></> }))} /></Card></div> : <WorkflowList workflows={workflows} hotspots={hotspots} onOpen={setSelectedWorkflow}/>}</>}
         {page === 'products' && <><PageHeading eyebrow="CATALOG / 03" title="产品库" intro="这里只显示你有权查看的产品。产品资料是后续推荐与创作的事实依据。" action={['admin', 'product_manager'].includes(user.role) ? <Button className="primary" onClick={() => setShowProductForm(true)}>＋ 新建产品</Button> : undefined}/><div className="list-header"><span>可见产品</span><small>{products.length} 个 SKU</small></div><Table<Product> rowKey="id" dataSource={products} pagination={{ pageSize: 10, hideOnSinglePage: true }} columns={[{ title: '产品', dataIndex: 'name' }, { title: 'SKU', dataIndex: 'sku' }, { title: '品类', dataIndex: 'category' }, { title: '分组', render: (_, p) => user.role === 'admin' ? <Select style={{ minWidth: 140 }} value={p.group_id || undefined} placeholder="未分组" options={groups.map(g => ({ value: g.id, label: g.name }))} onChange={value => void assignProductGroup(p.id, value)}/> : groups.find(g => g.id === p.group_id)?.name || '未分组' }, { title: '状态', dataIndex: 'status' }, { title: '维护', render: (_, p) => ['admin', 'product_manager'].includes(user.role) ? <Button type="link" onClick={() => setEditingProduct(p)}>编辑资料</Button> : '只读' }, { title: '素材', render: (_, p) => <Button type="link" onClick={() => setImageProduct(p)}>产品图片</Button> }]}/></>}

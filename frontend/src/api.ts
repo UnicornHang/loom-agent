@@ -1,7 +1,7 @@
 export type User = { id: string; username: string; role: 'admin' | 'product_manager' | 'creator' | 'reviewer' | 'viewer'; is_active: boolean; created_at: string }
 export type ProductGroup = { id: string; name: string; created_at: string }
 export type Product = { id: string; group_id: string | null; sku: string; name: string; category: string; description: string; status: string; created_at: string }
-export type Hotspot = { id: string; title: string; summary: string; content_type: 'text' | 'article' | 'video'; source_url: string | null; source_kind: string; industry: string; created_at: string }
+export type Hotspot = { id: string; title: string; summary: string; content_type: 'text' | 'article' | 'video'; source_url: string | null; source_kind: string; industry: string; created_at: string; source_metrics: { rank?: number; hot_value?: number; material_available?: boolean }; collected_at: string | null }
 export type Workflow = { id: string; hotspot_id: string; status: string; current_step: string; created_at: string }
 export type AgentEvent = { id: string; sequence: number; agent_type: string; event_type: string; title: string; summary: string; created_at: string }
 
@@ -109,7 +109,7 @@ export type Artifact = { id: string; workflow_id: string; version: number; kind:
 export type AgentRun = { id: string; workflow_id: string; configuration_id: string; workspace_revision: number; status: string; error: string; created_at: string }
 export type SourceInput = { name: string; adapter: string; industry: string; keywords: string[]; interval_minutes: number; enabled: boolean; authorization_note: string; revision: number }
 export type SourceConfig = SourceInput & { id: string; next_run_at: string }
-export type CollectionRun = { id: string; source_revision: number; trigger: string; status: string; summary: string; created_at: string }
+export type CollectionRun = { id: string; source_revision: number; trigger: string; status: string; summary: string; created_at: string; counts?: { received: number; valid: number; inserted: number; updated: number } }
 export type SkillVersion = { id: string; skill_key: string; version: number; status: string; manifest: { name: string; description: string; agents: string[]; industries: string[]; variables: string[] }; content: string; created_at: string }
 export type MCPServer = { id: string; revision: number; name: string; endpoint: string; timeout_seconds: number; data_scope: string; enabled: boolean; has_token: boolean; tested_revision: number | null; tools: { name: string; description: string; inputSchema: object }[] }
 export type Recommendation = { product_id: string; name: string; score: number; reason: string; evidence: string; semantic_score: number; keyword_score: number; retrieval_score: number }

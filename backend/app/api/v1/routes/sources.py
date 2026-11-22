@@ -14,7 +14,7 @@ router = APIRouter(prefix='/sources', tags=['sources'])
 class SourceWrite(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra='forbid')
     name: str = Field(min_length=1, max_length=100)
-    adapter: Literal['douyin_official', 'licensed_feed', 'custom_authorized']
+    adapter: Literal['douyin_hot_search', 'weibo_hot_search', 'bilibili_popular', 'xiaohongshu_hot_search', 'douyin_official', 'licensed_feed', 'custom_authorized']
     industry: str = Field(min_length=1, max_length=100)
     keywords: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(default_factory=list, max_length=100)
     interval_minutes: int = Field(default=60, ge=15, le=1440)
@@ -61,4 +61,4 @@ def run(source_id: str, db: Session = Depends(get_db), user: User = Depends(requ
 @router.get('/{source_id}/runs')
 def runs(source_id: str, db: Session = Depends(get_db), user: User = Depends(require_roles('admin'))):
     get_source(db, user, source_id)
-    return [{'id': row.id, 'source_revision': row.source_revision, 'trigger': row.trigger, 'status': row.status, 'summary': row.summary, 'created_at': row.created_at} for row in db.scalars(select(CollectionRun).where(CollectionRun.source_id == source_id).order_by(CollectionRun.created_at.desc()).limit(100))]
+    return [{'id': row.id, 'source_revision': row.source_revision, 'trigger': row.trigger, 'status': row.status, 'summary': row.summary, 'counts': row.counts, 'created_at': row.created_at} for row in db.scalars(select(CollectionRun).where(CollectionRun.source_id == source_id).order_by(CollectionRun.created_at.desc()).limit(100))]

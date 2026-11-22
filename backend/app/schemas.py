@@ -92,6 +92,9 @@ class HotspotRead(HotspotCreate):
     id: str
     source_kind: str
     created_at: datetime
+    source_item_id: str | None = None
+    source_metrics: dict = Field(default_factory=dict)
+    collected_at: datetime | None = None
 
 
 class WorkflowCreate(BaseModel):

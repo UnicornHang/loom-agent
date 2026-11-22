@@ -189,6 +189,9 @@ class CollectionRun(Base):
     trigger: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(30))
     summary: Mapped[str] = mapped_column(Text)
+    snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    counts: Mapped[dict] = mapped_column(JSON, default=dict)
+    dispatched: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -291,6 +294,7 @@ class ProductGrant(Base):
 
 class Hotspot(Base):
     __tablename__ = "hotspots"
+    __table_args__ = (UniqueConstraint('tenant_id', 'source_kind', 'source_item_id', name='uq_hotspot_source_item'),)
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     tenant_id: Mapped[str] = mapped_column(String(32), default="demo", index=True)
@@ -299,6 +303,9 @@ class Hotspot(Base):
     content_type: Mapped[str] = mapped_column(String(20))
     source_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     source_kind: Mapped[str] = mapped_column(String(30), default="manual")
+    source_item_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    source_metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+    collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     industry: Mapped[str] = mapped_column(String(100), default="3C")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

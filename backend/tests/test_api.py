@@ -56,6 +56,12 @@ def test_login_permissions_and_workflow(monkeypatch):
         assert admin.get('/api/v1/hotspots').json() == []
         assert admin.put(f'/api/v1/sources/{source_id}', json={**source_payload, 'revision': 0}, headers=admin_csrf).status_code == 409
         assert admin.put(f'/api/v1/sources/{source_id}', json={**source_payload, 'revision': 1, 'enabled': False}, headers=admin_csrf).status_code == 200
+        public_source = admin.post('/api/v1/sources', json={**source_payload, 'adapter': 'douyin_hot_search', 'enabled': False}, headers=admin_csrf)
+        assert public_source.status_code == 201
+        public_id = public_source.json()['id']
+        queued = admin.post(f'/api/v1/sources/{public_id}/run', headers=admin_csrf).json()
+        assert queued['status'] == 'queued'
+        assert admin.post(f'/api/v1/sources/{public_id}/run', headers=admin_csrf).json()['id'] == queued['id']
 
         from cryptography.fernet import Fernet
         from app.api.v1.routes import model_connections

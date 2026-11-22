@@ -12,7 +12,7 @@ router = APIRouter(prefix="/hotspots", tags=["hotspots"])
 
 @router.get("", response_model=list[HotspotRead])
 def list_hotspots(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    return db.scalars(select(Hotspot).where(Hotspot.tenant_id == user.tenant_id).order_by(Hotspot.created_at.desc())).all()
+    return db.scalars(select(Hotspot).where(Hotspot.tenant_id == user.tenant_id).order_by(Hotspot.collected_at.desc().nullslast(), Hotspot.created_at.desc())).all()
 
 
 @router.post("", response_model=HotspotRead, status_code=status.HTTP_201_CREATED,

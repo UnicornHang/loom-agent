@@ -86,6 +86,19 @@ services:
       api:
         condition: service_healthy
 
+  collector:
+    image: loom-agent-dev-api
+    working_dir: /app
+    command: ["python", "-m", "celery", "-A", "app.worker:celery", "worker", "--loglevel=INFO", "--concurrency=1", "-Q", "collection,control"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://loom:loom_dev_only@postgres:5432/loom
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    depends_on:
+      api:
+        condition: service_healthy
+
   scheduler:
     image: loom-agent-dev-api
     working_dir: /app
